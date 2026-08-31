@@ -1,0 +1,27 @@
+name: RadioPlayer
+options:
+  bundleIdPrefix: com.omg
+  deploymentTarget:
+    iOS: "16.0"
+targets:
+  RadioPlayer:
+    type: application
+    platform: iOS
+    sources:
+      - path: RadioPlayer
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.omg.radio
+        PRODUCT_NAME: OMG Radio
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+        SWIFT_VERSION: "5.0"
+        DEVELOPMENT_TEAM: ""
+        CODE_SIGNING_ALLOWED: "NO"
+        CODE_SIGNING_REQUIRED: "NO"
+        CODE_SIGN_IDENTITY: ""
+        INFOPLIST_KEY_UILaunchScreen_Generation: "YES"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait"
+        INFOPLIST_KEY_UIRequiresFullScreen: "YES"
