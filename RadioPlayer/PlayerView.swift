@@ -6,6 +6,7 @@ struct PlayerView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var repo = RadioRepository.shared
     @ObservedObject private var player = PlayerManager.shared
+    @State private var showRegionMenu = false
 
     var body: some View {
         GeometryReader { geo in
@@ -35,13 +36,8 @@ struct PlayerView: View {
                     VStack {
                         HStack {
                             Spacer()
-                            Menu {
-                                ForEach(station.regions.indices, id: \.self) { i in
-                                    let r = station.regions[i]
-                                    Button("\(r.name) — \(r.wave) FM") {
-                                        player.setRegion(i, stations: repo.stations)
-                                    }
-                                }
+                            Button {
+                                showRegionMenu.toggle()
                             } label: {
                                 Text(station.regionName(regionIndex: player.regionIndex))
                                     .font(.subheadline).fontWeight(.medium)
@@ -55,6 +51,36 @@ struct PlayerView: View {
                         .padding(.top, 40)
                         Spacer()
                     }
+                    .zIndex(10)
+                }
+
+                // Выпадающий список городов (кастомный оверлей вместо Menu — надёжно везде)
+                if showRegionMenu, let station = player.currentStation {
+                    VStack {
+                        HStack {
+                            Spacer()
+                            VStack(spacing: 0) {
+                                ForEach(station.regions.indices, id: \.self) { i in
+                                    let r = station.regions[i]
+                                    Button {
+                                        player.setRegion(i, stations: repo.stations)
+                                        showRegionMenu = false
+                                    } label: {
+                                        Text("\(r.name) — \(r.wave) FM")
+                                            .foregroundStyle(.white)
+                                            .padding(.horizontal, 16)
+                                            .padding(.vertical, 12)
+                                    }
+                                }
+                            }
+                            .background(Color.black.opacity(0.85))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .padding(.trailing, 16)
+                        }
+                        .padding(.top, 92)
+                        Spacer()
+                    }
+                    .zIndex(20)
                 }
 
                 VStack(spacing: 0) {
@@ -72,7 +98,7 @@ struct PlayerView: View {
                             }
                         )
                     )
-                    .frame(height: geo.size.height * 0.30)
+                    .frame(height: geo.size.height * 0.34)
                     .padding(.top, geo.size.height * 0.10)
 
                     Spacer()
@@ -148,9 +174,9 @@ private struct LogoCarousel: View {
                 ZStack {
                     Circle().fill(.white)
                     StationLogo(station: stations[i])
-                        .padding(24)
+                        .padding(14)
                 }
-                .padding(28)
+                .padding(14)
                 .tag(i)
             }
         }
