@@ -15,21 +15,21 @@ struct ServerRegionInfo: Decodable {
 struct ServerRadio: Decodable {
     let nid: String
     let name: String
-    let field_logo: String
-    let field_player_logo: String
+    let field_logo: String?
+    let field_player_logo: String?
     let field_payer_image: String?
-    let field_radio_cover: String
-    let body: String
-    let region: [ServerRadioRegion]
+    let field_radio_cover: String?
+    let body: String?
+    let region: [ServerRadioRegion]?
 }
 
 struct ServerRadioRegion: Decodable {
-    let field_radioset_rigion_id: String
-    let field_radioset_radio_wave: String
-    let field_radioset_stream_64: String
-    let field_radioset_stream_128: String
-    let field_radioset_phone: String
-    let field_radioset_site_link: String
+    let field_radioset_rigion_id: String?
+    let field_radioset_radio_wave: String?
+    let field_radioset_stream_64: String?
+    let field_radioset_stream_128: String?
+    let field_radioset_phone: String?
+    let field_radioset_site_link: String?
 }
 
 // MARK: - Модели приложения
@@ -77,16 +77,16 @@ struct Station: Identifiable {
 
 extension ServerRadio {
     func toStation(regionNames: [String: String]) -> Station {
-        let regs = region.map { sr in
+        let regs = (region ?? []).map { sr in
             StationRegion(
-                regionId: sr.field_radioset_rigion_id.trimmingCharacters(in: .whitespaces),
-                name: regionNames[sr.field_radioset_rigion_id.trimmingCharacters(in: .whitespaces)]
-                    ?? sr.field_radioset_rigion_id.trimmingCharacters(in: .whitespaces),
-                wave: sr.field_radioset_radio_wave.trimmingCharacters(in: .whitespaces),
-                stream128: sr.field_radioset_stream_128.trimmingCharacters(in: .whitespaces),
-                stream64: sr.field_radioset_stream_64.trimmingCharacters(in: .whitespaces),
-                phone: sr.field_radioset_phone.trimmingCharacters(in: .whitespaces),
-                siteLink: sr.field_radioset_site_link.trimmingCharacters(in: .whitespaces)
+                regionId: (sr.field_radioset_rigion_id ?? "").trimmingCharacters(in: .whitespaces),
+                name: regionNames[(sr.field_radioset_rigion_id ?? "").trimmingCharacters(in: .whitespaces)]
+                    ?? (sr.field_radioset_rigion_id ?? "").trimmingCharacters(in: .whitespaces),
+                wave: (sr.field_radioset_radio_wave ?? "").trimmingCharacters(in: .whitespaces),
+                stream128: (sr.field_radioset_stream_128 ?? "").trimmingCharacters(in: .whitespaces),
+                stream64: (sr.field_radioset_stream_64 ?? "").trimmingCharacters(in: .whitespaces),
+                phone: (sr.field_radioset_phone ?? "").trimmingCharacters(in: .whitespaces),
+                siteLink: (sr.field_radioset_site_link ?? "").trimmingCharacters(in: .whitespaces)
             )
         }
         let firstStream = (regs.first?.stream128 ?? regs.first?.stream64) ?? ""
@@ -94,10 +94,10 @@ extension ServerRadio {
         return Station(
             nid: slug,
             title: name.trimmingCharacters(in: .whitespaces),
-            logo: field_logo.trimmingCharacters(in: .whitespaces),
-            playerLogo: field_player_logo.trimmingCharacters(in: .whitespaces),
-            cover: field_radio_cover.trimmingCharacters(in: .whitespaces),
-            body: body,
+            logo: (field_logo ?? "").trimmingCharacters(in: .whitespaces),
+            playerLogo: (field_player_logo ?? "").trimmingCharacters(in: .whitespaces),
+            cover: (field_radio_cover ?? "").trimmingCharacters(in: .whitespaces),
+            body: body ?? "",
             regions: regs,
             localLogo: Self.localLogoNames[slug]
         )
@@ -135,6 +135,18 @@ struct NewsItem: Decodable, Identifiable {
     let image: String
     let link: String
     let body: String
+
+    private enum CodingKeys: String, CodingKey { case id, title, date, image, link, body }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(String.self, forKey: .id) ?? UUID().uuidString
+        title = try c.decodeIfPresent(String.self, forKey: .title) ?? ""
+        date = try c.decodeIfPresent(String.self, forKey: .date) ?? ""
+        image = try c.decodeIfPresent(String.self, forKey: .image) ?? ""
+        link = try c.decodeIfPresent(String.self, forKey: .link) ?? ""
+        body = try c.decodeIfPresent(String.self, forKey: .body) ?? ""
+    }
 }
 
 // MARK: - Токен для формы сообщения
