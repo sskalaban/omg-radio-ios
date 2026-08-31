@@ -13,6 +13,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.omg.radio
         PRODUCT_NAME: OMG Radio
+        INFOPLIST_FILE: RadioPlayer/Info.plist
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
         TARGETED_DEVICE_FAMILY: "1,2"
