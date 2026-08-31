@@ -175,6 +175,7 @@ private struct LogoCarousel: View {
                     Circle().fill(.white)
                     StationLogo(station: stations[i])
                         .padding(14)
+                        .scaleEffect(0.7)
                 }
                 .padding(14)
                 .tag(i)
