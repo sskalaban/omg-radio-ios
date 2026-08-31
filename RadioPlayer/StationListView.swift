@@ -132,7 +132,7 @@ struct MiniPlayerView: View {
                     .font(.subheadline).fontWeight(.medium)
                     .foregroundStyle(.white)
                     .lineLimit(1)
-                let sub = station.freqLabel(player.regionIndex)
+                let sub = station.freqLabel(regionIndex: player.regionIndex)
                 if !sub.isEmpty {
                     Text(sub)
                         .font(.footnote)

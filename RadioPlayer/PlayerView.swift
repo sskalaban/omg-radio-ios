@@ -98,7 +98,7 @@ struct PlayerView: View {
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
 
-            if let sub = station?.freqLabel(player.regionIndex), !sub.isEmpty {
+            if let sub = station?.freqLabel(regionIndex: player.regionIndex), !sub.isEmpty {
                 Text(sub)
                     .font(.title2).fontWeight(.light)
                     .foregroundStyle(.white)

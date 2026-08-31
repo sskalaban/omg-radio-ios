@@ -33,7 +33,7 @@ struct StationDetailView: View {
                                     Text(station.title)
                                         .font(.title2).fontWeight(.bold)
                                         .foregroundStyle(.white)
-                                    let sub = station.freqLabel(player.regionIndex)
+                                    let sub = station.freqLabel(regionIndex: player.regionIndex)
                                     if !sub.isEmpty {
                                         Text(sub)
                                             .foregroundStyle(.white)
