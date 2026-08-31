@@ -1,0 +1,40 @@
+name: Сборка iOS (симулятор)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Установка XcodeGen
+        run: brew install xcodegen
+
+      - name: Генерация проекта
+        run: xcodegen generate
+
+      - name: Сборка для iOS Simulator
+        run: |
+          xcodebuild \
+            -project RadioPlayer.xcodeproj \
+            -scheme RadioPlayer \
+            -configuration Debug \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Упаковка .app
+        run: |
+          APP_DIR=$(find ~/Library/Developer/Xcode/DerivedData -name "RadioPlayer.app" -path "*/Debug-iphonesimulator/*" | head -1)
+          echo "Found app at: $APP_DIR"
+          ditto -c -k --sequesterRsrc --keepParent "$APP_DIR" RadioPlayer-simulator.zip
+
+      - name: Загрузка артефакта
+        uses: actions/upload-artifact@v4
+        with:
+          name: RadioPlayer-simulator
+          path: RadioPlayer-simulator.zip
