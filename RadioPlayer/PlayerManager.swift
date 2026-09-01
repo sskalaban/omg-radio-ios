@@ -18,6 +18,15 @@ final class PlayerManager: ObservableObject {
     private var statusObserver: NSKeyValueObservation?
     private var timeControlObserver: NSKeyValueObservation?
 
+    // Сон-таймер
+    @Published private(set) var sleepRemainingSec: Int = 0
+    private var sleepTimer: Timer?
+    private var sleepEndAt: Date?
+
+    // Будильник: громкость/нарастание и отложенный запуск до загрузки станций
+    private var volumeRampTimer: Timer?
+    private var pendingAlarm: (nid: String, volume: Float, fadeIn: Bool)?
+
     private init() {
         highQuality = UserDefaults.standard.object(forKey: "highQuality") as? Bool ?? true
         regionIndex = UserDefaults.standard.integer(forKey: "regionIndex")
@@ -105,6 +114,89 @@ final class PlayerManager: ObservableObject {
         let nid = UserDefaults.standard.string(forKey: "lastStationNid") ?? ""
         if let i = stations.firstIndex(where: { $0.nid == nid }) {
             stationIndex = i
+        }
+    }
+
+    // MARK: - Сон-таймер
+
+    /// minutes <= 0 — выключить. По истечении ставит на паузу (как в Android-версии).
+    func setSleepTimer(minutes: Int) {
+        sleepTimer?.invalidate()
+        sleepTimer = nil
+        sleepEndAt = nil
+        guard minutes > 0 else {
+            sleepRemainingSec = 0
+            return
+        }
+        sleepEndAt = Date().addingTimeInterval(TimeInterval(minutes * 60))
+        sleepRemainingSec = minutes * 60
+        sleepTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.tickSleepTimer()
+            }
+        }
+    }
+
+    private func tickSleepTimer() {
+        guard let end = sleepEndAt else { return }
+        let left = Int(end.timeIntervalSinceNow)
+        if left <= 0 {
+            sleepRemainingSec = 0
+            sleepTimer?.invalidate()
+            sleepTimer = nil
+            sleepEndAt = nil
+            player?.pause()
+            isPlaying = false
+        } else {
+            sleepRemainingSec = left
+        }
+    }
+
+    // MARK: - Будильник (запуск по тапу на уведомление)
+
+    func playAlarm(stationNid: String, volume: Float, fadeIn: Bool) {
+        let stations = RadioRepository.shared.stations
+        guard !stations.isEmpty else {
+            // Станции ещё не загружены — запустим по их прибытию
+            pendingAlarm = (stationNid, volume, fadeIn)
+            return
+        }
+        let index = stations.firstIndex(where: { $0.nid == stationNid }) ?? 0
+        play(index: index, stations: stations)
+        applyAlarmVolume(volume, fadeIn: fadeIn)
+    }
+
+    /// Вызывается репозиторием после загрузки станций.
+    func runPendingAlarmIfAny(stations: [Station]) {
+        guard let pending = pendingAlarm else { return }
+        pendingAlarm = nil
+        let index = stations.firstIndex(where: { $0.nid == pending.nid }) ?? 0
+        play(index: index, stations: stations)
+        applyAlarmVolume(pending.volume, fadeIn: pending.fadeIn)
+    }
+
+    private func applyAlarmVolume(_ target: Float, fadeIn: Bool) {
+        volumeRampTimer?.invalidate()
+        volumeRampTimer = nil
+        guard let player else { return }
+        if fadeIn {
+            player.volume = 0
+            var step = 0
+            let steps = 45
+            volumeRampTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] timer in
+                guard let self, let player = self.player else {
+                    timer.invalidate()
+                    return
+                }
+                step += 1
+                player.volume = target * Float(step) / Float(steps)
+                if step >= steps {
+                    timer.invalidate()
+                    self.volumeRampTimer = nil
+                }
+            }
+        } else {
+            player.volume = target
         }
     }
 }

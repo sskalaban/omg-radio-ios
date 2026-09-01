@@ -31,6 +31,7 @@ final class RadioRepository: ObservableObject {
             stations = s
             news = n
             loaded = true
+            PlayerManager.shared.runPendingAlarmIfAny(stations: s)
         } catch {
             print("RadioRepository load failed: \(error)")
             isError = true

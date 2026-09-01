@@ -6,7 +6,10 @@ struct PlayerView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var repo = RadioRepository.shared
     @ObservedObject private var player = PlayerManager.shared
+    @ObservedObject private var alarm = AlarmStore.shared
     @State private var showRegionMenu = false
+    @State private var showAlarmDialog = false
+    @State private var showSleepDialog = false
 
     var body: some View {
         GeometryReader { geo in
@@ -111,6 +114,28 @@ struct PlayerView: View {
                     bottomPanel(geo: geo)
                 }
                 .ignoresSafeArea()
+
+                // Диалог таймера сна
+                if showSleepDialog {
+                    SleepTimerDialog(
+                        remainingSec: player.sleepRemainingSec,
+                        onSelect: { minutes in
+                            player.setSleepTimer(minutes: minutes)
+                            showSleepDialog = false
+                        },
+                        onClose: { showSleepDialog = false }
+                    )
+                    .zIndex(30)
+                }
+
+                // Диалог будильника
+                if showAlarmDialog {
+                    AlarmDialog(
+                        stations: repo.stations,
+                        onClose: { showAlarmDialog = false }
+                    )
+                    .zIndex(31)
+                }
             }
         }
         .background(Color.omgBackground)
@@ -147,6 +172,31 @@ struct PlayerView: View {
             }
             .foregroundStyle(.white)
             .padding(.top, 8)
+
+            // Действия: будильник / таймер сна
+            HStack(spacing: 64) {
+                Button { showAlarmDialog = true } label: {
+                    VStack(spacing: 2) {
+                        Image(systemName: "alarm")
+                            .font(.title2)
+                            .foregroundStyle(alarm.config.enabled ? Color.yellow : .white)
+                        Text(alarm.config.enabled ? alarm.config.timeLabel : " ")
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.7))
+                    }
+                }
+                Button { showSleepDialog = true } label: {
+                    VStack(spacing: 2) {
+                        Image(systemName: "timer")
+                            .font(.title2)
+                            .foregroundStyle(player.sleepRemainingSec > 0 ? Color.yellow : .white)
+                        Text(player.sleepRemainingSec > 0 ? "\(player.sleepRemainingSec / 60 + 1)м" : " ")
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.7))
+                    }
+                }
+            }
+            .padding(.top, 12)
 
             if player.isBuffering {
                 ProgressView().tint(.white)
