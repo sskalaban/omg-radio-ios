@@ -9,10 +9,13 @@ struct StationListView: View {
     @ObservedObject private var favorites = Favorites.shared
     // Вкладка: 0 = Станции, 1 = Новости
     @State private var mainTab = 0
-    @State private var showPlayer = false
     @State private var showMessage = false
+    @State private var showStationDetail = false
     @State private var showCityMenu = false
     @State private var cityId: String = UserDefaults.standard.string(forKey: "cityFilter") ?? ""
+    // Выезжающий плеер: offset 0 = раскрыт, collapsedOffset = свёрнут за экраном
+    @State private var sheetExpanded = false
+    @State private var sheetOffset: CGFloat = 4000
 
     /// Города из региональных вариантов станций
     private var regions: [StationRegion] {
@@ -58,85 +61,157 @@ struct StationListView: View {
     }
 
     var body: some View {
-        ZStack {
-            Color.omgBackground.ignoresSafeArea()
+        GeometryReader { geo in
+            let collapsedOffset = geo.size.height + 60
+            ZStack {
+                Color.omgBackground.ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                // Шапка: логотип OMG по центру
-                ZStack {
-                    Image("g12")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(height: 40)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 80)
-                .background(
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(Color.newsGradient)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                )
+                VStack(spacing: 0) {
+                    // Шапка: логотип OMG по центру
+                    ZStack {
+                        Image("g12")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 40)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 80)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(Color.newsGradient)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                    )
 
-                Group {
-                    if repo.isLoading && repo.stations.isEmpty {
-                        Spacer()
-                        ProgressView().tint(.white)
-                        Spacer()
-                    } else if repo.isError && repo.stations.isEmpty {
-                        Spacer()
-                        VStack(spacing: 16) {
-                            Text("Нет подключения к интернету")
+                    Group {
+                        if repo.isLoading && repo.stations.isEmpty {
+                            Spacer()
+                            ProgressView().tint(.white)
+                            Spacer()
+                        } else if repo.isError && repo.stations.isEmpty {
+                            Spacer()
+                            VStack(spacing: 16) {
+                                Text("Нет подключения к интернету")
+                                    .foregroundStyle(.white)
+                                Button("Повторить") {
+                                    Task { await repo.load(force: true) }
+                                }
                                 .foregroundStyle(.white)
-                            Button("Повторить") {
-                                Task { await repo.load(force: true) }
+                                .padding(.horizontal, 32).padding(.vertical, 10)
+                                .background(Color(white: 0.2))
+                                .clipShape(Capsule())
                             }
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 32).padding(.vertical, 10)
-                            .background(Color(white: 0.2))
-                            .clipShape(Capsule())
+                            Spacer()
+                        } else if mainTab == 1 {
+                            NewsListView(news: repo.news)
+                        } else {
+                            stationGrid
                         }
+                    }
+                    .refreshable { await repo.load(force: true) }
+
+                    // Резерв под мини-плеер
+                    if !repo.stations.isEmpty {
+                        Spacer().frame(height: 72)
+                    }
+
+                    // Нижнее меню: Станции / Новости / Написать
+                    bottomMenu
+                }
+
+                // Мини-плеер с тенью, над меню; свайп вверх — плеер выезжает
+                if let station = player.currentStation, !repo.stations.isEmpty {
+                    VStack(spacing: 0) {
                         Spacer()
-                    } else if mainTab == 1 {
-                        NewsListView(news: repo.news)
-                    } else {
-                        stationGrid
+                        MiniPlayerView(station: station)
+                            .shadow(radius: 12)
+                            .opacity(miniAlpha(collapsedOffset: collapsedOffset))
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                expand(collapsedOffset: collapsedOffset)
+                            }
+                            .gesture(sheetDrag(collapsedOffset: collapsedOffset))
+                            .padding(.bottom, 60)
                     }
                 }
-                .refreshable { await repo.load(force: true) }
 
-                // Резерв под мини-плеер
+                // Полноэкранный плеер: свайп вниз — сворачивается обратно
                 if !repo.stations.isEmpty {
-                    Spacer().frame(height: 72)
-                }
-
-                // Нижнее меню: Станции / Новости / Написать
-                bottomMenu
-            }
-
-            // Мини-плеер с тенью, над меню
-            if let station = player.currentStation, !repo.stations.isEmpty {
-                VStack(spacing: 0) {
-                    Spacer()
-                    MiniPlayerView(station: station)
-                        .shadow(radius: 12)
-                        .onTapGesture { showPlayer = true }
-                        .padding(.bottom, 60)
+                    PlayerView(
+                        onClose: { collapse(collapsedOffset: collapsedOffset) },
+                        onWriteMessage: { showMessage = true },
+                        onShowInfo: { showStationDetail = true }
+                    )
+                    .offset(y: sheetOffset)
+                    .gesture(sheetDrag(collapsedOffset: collapsedOffset))
                 }
             }
-        }
-        .fullScreenCover(isPresented: $showPlayer) {
-            PlayerView()
+            .onAppear {
+                sheetOffset = collapsedOffset
+            }
         }
         .sheet(isPresented: $showMessage) {
             if let station = player.currentStation {
                 MessageView(station: station)
             }
         }
+        .sheet(isPresented: $showStationDetail) {
+            StationDetailView(index: player.stationIndex)
+        }
         .task {
             await repo.load()
             player.restoreSelection(stations: repo.stations)
         }
+    }
+
+    // MARK: - Выезжающий плеер (drag)
+
+    private func miniAlpha(collapsedOffset: CGFloat) -> Double {
+        let progress = 1 - sheetOffset / collapsedOffset
+        return max(0, 1 - progress * 2)
+    }
+
+    private func expand(collapsedOffset: CGFloat) {
+        withAnimation(.easeOut(duration: 0.3)) {
+            sheetExpanded = true
+            sheetOffset = 0
+        }
+    }
+
+    private func collapse(collapsedOffset: CGFloat) {
+        withAnimation(.easeOut(duration: 0.3)) {
+            sheetExpanded = false
+            sheetOffset = collapsedOffset
+        }
+    }
+
+    /// Единый drag: мини-плеер тянем вверх — плеер выезжает;
+    /// полноэкранный тянем вниз — сворачивается (зеркало Android PlayerSheet).
+    private func sheetDrag(collapsedOffset: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 8)
+            .onChanged { value in
+                // Только вертикальные жесты (горизонталь — карусель станций)
+                guard abs(value.translation.height) > abs(value.translation.width) else { return }
+                let base: CGFloat = sheetExpanded ? 0 : collapsedOffset
+                sheetOffset = max(0, min(collapsedOffset, base + value.translation.height))
+            }
+            .onEnded { value in
+                if sheetExpanded {
+                    let shouldCollapse = value.translation.height > collapsedOffset * 0.2
+                        || value.predictedEndTranslation.height > collapsedOffset * 0.45
+                    withAnimation(.easeOut(duration: 0.3)) {
+                        sheetExpanded = !shouldCollapse
+                        sheetOffset = shouldCollapse ? collapsedOffset : 0
+                    }
+                } else {
+                    let shouldExpand = value.translation.height < -collapsedOffset * 0.2
+                        || value.predictedEndTranslation.height < -collapsedOffset * 0.45
+                    withAnimation(.easeOut(duration: 0.3)) {
+                        sheetExpanded = shouldExpand
+                        sheetOffset = shouldExpand ? 0 : collapsedOffset
+                    }
+                }
+            }
     }
 
     // MARK: - Нижнее меню
