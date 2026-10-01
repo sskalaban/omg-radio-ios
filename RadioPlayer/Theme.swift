@@ -15,6 +15,7 @@ extension Color {
 
     static let omgBackground = Color(hex: 0xFF0C1027)
     static let omgToolbarDark = Color(hex: 0xFF070A19)
+    static let omgTile = Color(hex: 0xFF232847)
     static let omgPink = Color(hex: 0xFFE5097F)
     static let omgBlue = Color(hex: 0xFF3A3C8D)
     static let omgNewsStart = Color(hex: 0xFF121345)

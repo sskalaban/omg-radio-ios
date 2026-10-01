@@ -10,6 +10,8 @@ final class PlayerManager: ObservableObject {
     @Published var regionIndex = 0
     @Published private(set) var isPlaying = false
     @Published private(set) var isBuffering = false
+    /// Название текущего трека из ICY-метаданных потока (как в Android-версии).
+    @Published private(set) var trackTitle: String?
     @Published var highQuality: Bool {
         didSet { UserDefaults.standard.set(highQuality, forKey: "highQuality") }
     }
@@ -17,6 +19,7 @@ final class PlayerManager: ObservableObject {
     private var player: AVPlayer?
     private var statusObserver: NSKeyValueObservation?
     private var timeControlObserver: NSKeyValueObservation?
+    private var metadataObserver: NSKeyValueObservation?
 
     // Сон-таймер
     @Published private(set) var sleepRemainingSec: Int = 0
@@ -42,6 +45,7 @@ final class PlayerManager: ObservableObject {
     func play(index: Int, stations: [Station]) {
         guard let station = stations[safe: index] else { return }
         stationIndex = index
+        trackTitle = nil
         UserDefaults.standard.set(station.nid, forKey: "lastStationNid")
         let urlString = station.streamUrl(hq: highQuality, regionIndex: regionIndex)
         guard !urlString.isEmpty, let url = URL(string: urlString) else { return }
@@ -50,9 +54,23 @@ final class PlayerManager: ObservableObject {
         player?.pause()
         statusObserver = nil
         timeControlObserver = nil
+        metadataObserver = nil
 
-        let player = AVPlayer(url: url)
+        let item = AVPlayerItem(url: url)
+        let player = AVPlayer(playerItem: item)
         self.player = player
+
+        // ICY-метаданные: исполнитель — название песни
+        metadataObserver = item.observe(\.timedMetadata, options: [.new]) { [weak self] item, _ in
+            Task { @MainActor in
+                guard let meta = item.timedMetadata else { return }
+                for m in meta where m.commonKey?.rawValue == "title" {
+                    guard let value = m.stringValue?.trimmingCharacters(in: .whitespaces),
+                          !value.isEmpty, value != station.title else { continue }
+                    self?.trackTitle = value
+                }
+            }
+        }
 
         timeControlObserver = player.observe(\.timeControlStatus, options: [.new]) { [weak self] p, _ in
             Task { @MainActor in
@@ -115,6 +133,19 @@ final class PlayerManager: ObservableObject {
         if let i = stations.firstIndex(where: { $0.nid == nid }) {
             stationIndex = i
         }
+    }
+
+    /// Выбор станции без запуска воспроизведения (тап по плитке до play).
+    func selectStation(_ index: Int, stations: [Station]) {
+        guard stations.indices.contains(index) else { return }
+        stationIndex = index
+        UserDefaults.standard.set(stations[index].nid, forKey: "lastStationNid")
+    }
+
+    /// Тихий выбор региона (плитка города на главной): без перезапуска потока.
+    func setRegionSilent(_ index: Int) {
+        regionIndex = index
+        UserDefaults.standard.set(index, forKey: "regionIndex")
     }
 
     // MARK: - Сон-таймер

@@ -69,6 +69,35 @@ struct AlarmDialog: View {
 
     private let dayNames = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
 
+    /// Текст «Сработает сегодня/завтра/в <день> в HH:MM» для текущего состояния диалога.
+    private var fireLabel: String {
+        if days.isEmpty { return "Выберите хотя бы один день" }
+        let config = AlarmConfig(enabled: true, minutesOfDay: minutesOfDay, days: days)
+        if config.isTodaySelectedButPassed {
+            return "Время сегодня уже прошло — сработает сразу после сохранения"
+        }
+        // Ближайший выбранный день со временем в будущем
+        let cal = Calendar.current
+        let now = Date()
+        let nowMinutes = cal.component(.hour, from: now) * 60 + cal.component(.minute, from: now)
+        for add in 0...7 {
+            guard let date = cal.date(byAdding: .day, value: add, to: now) else { continue }
+            let appleWeekday = cal.component(.weekday, from: date)
+            let mappedDay = appleWeekday == 1 ? 7 : appleWeekday - 1
+            let isFuture = add > 0 || minutesOfDay > nowMinutes
+            if days.contains(mappedDay), isFuture {
+                let dayLabel: String
+                switch add {
+                case 0: dayLabel = "сегодня"
+                case 1: dayLabel = "завтра"
+                default: dayLabel = dayNames[mappedDay - 1].lowercased()
+                }
+                return String(format: "Сработает %@ в %02d:%02d", dayLabel, minutesOfDay / 60, minutesOfDay % 60)
+            }
+        }
+        return ""
+    }
+
     var body: some View {
         ZStack {
             Color.black.opacity(0.55)
@@ -115,6 +144,12 @@ struct AlarmDialog: View {
                             }
                         }
                     }
+
+                    // Подсказка, когда сработает (как в Android-версии)
+                    Text(fireLabel)
+                        .font(.footnote)
+                        .foregroundStyle(.white.opacity(0.7))
+                        .multilineTextAlignment(.center)
 
                     // Станция
                     VStack(alignment: .leading, spacing: 6) {
