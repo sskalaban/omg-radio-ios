@@ -187,7 +187,8 @@ struct StationListView: View {
                 cityPicker
                     .gridCellColumns(3)
 
-                ForEach(tiles, id: \.self) { tile in
+                ForEach(tiles.indices, id: \.self) { ti in
+                    let tile = tiles[ti]
                     let station = repo.stations[tile.index]
                     tileView(station: station, index: tile.index, regionIndex: tile.regionIndex)
                 }
