@@ -1,55 +1,57 @@
 import SwiftUI
 
 /// Список новостей: карточки с обложкой, датой и превью текста.
+/// Тап открывает детальную страницу (sheet — NavigationStack на этом экране нет).
 struct NewsListView: View {
     let news: [NewsItem]
+    @State private var selected: NewsItem?
 
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 16) {
                 ForEach(news) { item in
-                    NavigationLink {
-                        NewsDetailView(item: item)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 10) {
-                            ZStack(alignment: .topTrailing) {
-                                RemoteImage(url: item.image)
-                                    .frame(height: 190)
-                                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    VStack(alignment: .leading, spacing: 10) {
+                        ZStack(alignment: .topTrailing) {
+                            RemoteImage(url: item.image)
+                                .frame(height: 190)
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
 
-                                if !item.date.isEmpty {
-                                    Text(item.date)
-                                        .font(.caption)
-                                        .foregroundStyle(.white)
-                                        .padding(.horizontal, 8).padding(.vertical, 3)
-                                        .background(Color.black.opacity(0.4))
-                                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                                        .padding(8)
-                                }
-                            }
-                            .overlay(alignment: .bottomLeading) {
-                                Text(item.title)
-                                    .font(.title3).fontWeight(.medium)
+                            if !item.date.isEmpty {
+                                Text(item.date)
+                                    .font(.caption)
                                     .foregroundStyle(.white)
-                                    .shadow(color: .black.opacity(0.7), radius: 4)
-                                    .padding(12)
+                                    .padding(.horizontal, 8).padding(.vertical, 3)
+                                    .background(Color.black.opacity(0.4))
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    .padding(8)
                             }
-
-                            Text(item.body.strippingHtml())
-                                .fontWeight(.light)
-                                .foregroundStyle(.white)
-                                .lineLimit(4)
-
-                            Text("Читать далее")
-                                .font(.body)
-                                .foregroundStyle(.white)
                         }
+                        .overlay(alignment: .bottomLeading) {
+                            Text(item.title)
+                                .font(.title3).fontWeight(.medium)
+                                .foregroundStyle(.white)
+                                .shadow(color: .black.opacity(0.7), radius: 4)
+                                .padding(12)
+                        }
+
+                        Text(item.body.strippingHtml())
+                            .fontWeight(.light)
+                            .foregroundStyle(.white)
+                            .lineLimit(4)
+
+                        Text("Читать далее")
+                            .font(.body)
+                            .foregroundStyle(.white)
                     }
-                    .buttonStyle(.plain)
+                    .contentShape(Rectangle())
+                    .onTapGesture { selected = item }
                 }
             }
             .padding(.horizontal, 12)
             .padding(.bottom, 76)
+        }
+        .sheet(item: $selected) { item in
+            NewsDetailView(item: item)
         }
     }
 }
