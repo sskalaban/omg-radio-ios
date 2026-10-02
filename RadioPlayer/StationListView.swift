@@ -249,27 +249,30 @@ struct StationListView: View {
     // MARK: - Сетка станций
 
     private var stationGrid: some View {
-        ScrollView {
-            LazyVGrid(
-                columns: [
-                    GridItem(.flexible(), spacing: 8),
-                    GridItem(.flexible(), spacing: 8),
-                    GridItem(.flexible(), spacing: 8),
-                ],
-                spacing: 8
-            ) {
-                // Кнопка выбора города — на всю ширину
-                cityPicker
-                    .gridCellColumns(3)
+        VStack(spacing: 0) {
+            // Кнопка выбора города — отдельной строкой во всю ширину над сеткой
+            cityPicker
+                .padding(.horizontal, 14)
+                .padding(.top, 4)
+                .padding(.bottom, 8)
 
-                ForEach(tiles.indices, id: \.self) { ti in
-                    let tile = tiles[ti]
-                    let station = repo.stations[tile.index]
-                    tileView(station: station, index: tile.index, regionIndex: tile.regionIndex)
+            ScrollView {
+                LazyVGrid(
+                    columns: [
+                        GridItem(.flexible(), spacing: 8),
+                        GridItem(.flexible(), spacing: 8),
+                        GridItem(.flexible(), spacing: 8),
+                    ],
+                    spacing: 8
+                ) {
+                    ForEach(tiles.indices, id: \.self) { ti in
+                        let tile = tiles[ti]
+                        let station = repo.stations[tile.index]
+                        tileView(station: station, index: tile.index, regionIndex: tile.regionIndex)
+                    }
                 }
+                .padding(.horizontal, 10)
             }
-            .padding(.horizontal, 10)
-            .padding(.top, 4)
         }
     }
 
