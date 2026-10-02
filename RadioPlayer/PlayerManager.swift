@@ -1,5 +1,6 @@
 import Foundation
 import AVFoundation
+import MediaPlayer
 
 /// Единая точка управления воспроизведением (зеркало PlayerManager из Android-версии).
 @MainActor
@@ -35,6 +36,7 @@ final class PlayerManager: ObservableObject {
         regionIndex = UserDefaults.standard.integer(forKey: "regionIndex")
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
         try? AVAudioSession.sharedInstance().setActive(true)
+        setupRemoteCommands()
     }
 
     var currentStation: Station? {
@@ -89,6 +91,63 @@ final class PlayerManager: ObservableObject {
             }
         }
         player.play()
+        updateNowPlaying(station: station)
+    }
+
+    // MARK: - Now Playing / медиа-кнопки (CarPlay, экран блокировки, руль)
+
+    /// Кнопки play/pause/next/prev на экране блокировки, в CarPlay и на руле.
+    private func setupRemoteCommands() {
+        let center = MPRemoteCommandCenter.shared()
+        center.playCommand.addTarget { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                self.play(index: self.stationIndex, stations: RadioRepository.shared.stations)
+            }
+            return .success
+        }
+        center.pauseCommand.addTarget { [weak self] _ in
+            Task { @MainActor in
+                self?.toggle(stations: RadioRepository.shared.stations)
+            }
+            return .success
+        }
+        center.nextTrackCommand.addTarget { [weak self] _ in
+            Task { @MainActor in
+                self?.next(stations: RadioRepository.shared.stations)
+            }
+            return .success
+        }
+        center.previousTrackCommand.addTarget { [weak self] _ in
+            Task { @MainActor in
+                self?.prev(stations: RadioRepository.shared.stations)
+            }
+            return .success
+        }
+    }
+
+    /// Название станции и логотип на экране блокировки и в CarPlay Now Playing.
+    private func updateNowPlaying(station: Station) {
+        var info: [String: Any] = [
+            MPMediaItemPropertyTitle: station.title,
+            MPMediaItemPropertyArtist: station.freqLabel(regionIndex: regionIndex),
+            MPNowPlayingInfoPropertyIsLiveStream: true,
+        ]
+        if let local = station.localLogo, let image = UIImage(named: local) {
+            info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+        }
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+
+        // Удалённый логотип — в фоне, затем обновление артворка
+        if station.localLogo == nil, !station.logo.isEmpty, let url = URL(string: station.logo) {
+            URLSession.shared.dataTask(with: url) { data, _, _ in
+                guard let data, let image = UIImage(data: data) else { return }
+                Task { @MainActor in
+                    MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPMediaItemPropertyArtwork] =
+                        MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+                }
+            }.resume()
+        }
     }
 
     func toggle(stations: [Station]) {

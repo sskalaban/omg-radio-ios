@@ -5,6 +5,9 @@ import Foundation
 final class RadioRepository: ObservableObject {
     static let shared = RadioRepository()
 
+    /// Шлётся после каждой успешной загрузки станций (для CarPlay-шаблона).
+    static let stationsDidLoadNotification = Notification.Name("omg.stationsDidLoad")
+
     @Published private(set) var stations: [Station] = []
     @Published private(set) var news: [NewsItem] = []
     @Published private(set) var isLoading = false
@@ -31,6 +34,7 @@ final class RadioRepository: ObservableObject {
             stations = s
             news = n
             loaded = true
+            NotificationCenter.default.post(name: Self.stationsDidLoadNotification, object: nil)
             PlayerManager.shared.runPendingAlarmIfAny(stations: s)
         } catch {
             print("RadioRepository load failed: \(error)")
