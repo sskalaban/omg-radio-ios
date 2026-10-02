@@ -42,7 +42,10 @@ struct PlayerView: View {
                             }
                         }
                     )
-                    .frame(height: geo.size.height * 0.30)
+                    // Ширина карусели ограничена экраном: иначе её контент
+                    // шире экрана и сдвигает центрирование всех контролов влево
+                    .frame(width: geo.size.width, height: geo.size.height * 0.30)
+                    .clipped()
                     .padding(.top, geo.size.height * 0.12)
 
                     // Название, частота, трек
@@ -112,6 +115,8 @@ struct PlayerView: View {
                             .padding(.bottom, 8)
                     }
                 }
+                // Весь столбец — шириной с экран: контролы центрируются по экрану
+                .frame(maxWidth: .infinity)
 
                 // Кнопка «Скрыть»
                 VStack {
