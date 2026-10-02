@@ -274,24 +274,24 @@ struct StationListView: View {
     }
 
     private var cityPicker: some View {
-        HStack {
-            Button {
-                showCityMenu = true
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "mappin")
-                        .font(.system(size: 14))
-                    Text(cityName)
-                        .font(.subheadline).fontWeight(.medium)
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 12))
-                }
-                .foregroundStyle(.white)
-                .padding(.horizontal, 12).padding(.vertical, 8)
-                .background(Color.omgTile)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+        Button {
+            showCityMenu = true
+        } label: {
+            HStack(spacing: 6) {
+                Spacer()
+                Image(systemName: "mappin")
+                    .font(.system(size: 14))
+                Text(cityName)
+                    .font(.subheadline).fontWeight(.medium)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 12))
+                Spacer()
             }
-            Spacer()
+            .foregroundStyle(.white)
+            .padding(.horizontal, 12).padding(.vertical, 10)
+            .frame(maxWidth: .infinity)
+            .background(Color.omgTile)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
         }
         .padding(.bottom, 2)
         .confirmationDialog("Город", isPresented: $showCityMenu, titleVisibility: .hidden) {
