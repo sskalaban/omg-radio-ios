@@ -93,6 +93,25 @@ struct NewsDetailView: View {
                     }
                 }
                 .padding(20)
+                .padding(.top, 44)
+            }
+
+            // Кнопка «скрыть новость» — круглая со стрелкой назад (как в Android-версии)
+            VStack {
+                HStack {
+                    Button { dismiss() } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.title3).fontWeight(.bold)
+                            .foregroundStyle(.black.opacity(0.7))
+                            .frame(width: 44, height: 44)
+                            .background(Color.white.opacity(0.85))
+                            .clipShape(Circle())
+                    }
+                    .padding(.leading, 16)
+                    .padding(.top, 8)
+                    Spacer()
+                }
+                Spacer()
             }
         }
     }
