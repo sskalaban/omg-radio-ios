@@ -66,6 +66,7 @@ struct AlarmDialog: View {
     @State private var stationNid: String = ""
     @State private var volume: Float = 0.7
     @State private var fadeIn = true
+    @State private var showStationDialog = false
 
     private let dayNames = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
 
@@ -151,39 +152,30 @@ struct AlarmDialog: View {
                         .foregroundStyle(.white.opacity(0.7))
                         .multilineTextAlignment(.center)
 
-                    // Станция
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Станция")
-                            .foregroundStyle(.white.opacity(0.8))
-                            .font(.footnote)
-                        ScrollView {
-                            VStack(spacing: 0) {
-                                ForEach(stations) { station in
-                                    Button {
-                                        stationNid = station.nid
-                                    } label: {
-                                        Text(station.title)
-                                            .foregroundStyle(.white)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                            .padding(.horizontal, 12)
-                                            .padding(.vertical, 8)
-                                            .background(
-                                                stationNid == station.nid
-                                                    ? Color.omgPink.opacity(0.4)
-                                                    : Color.clear
-                                            )
-                                    }
-                                }
-                            }
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Color.white.opacity(0.3))
-                            )
-                        }
-                        .frame(maxHeight: 150)
+                    // Станция — одной строкой, список открывается по тапу
+                    // (как в Android-версии; развёрнутый список обрезал диалог)
+                    HStack {
+                        Text("Станция: \(stations.first { $0.nid == stationNid }?.title ?? "текущая")")
+                            .foregroundStyle(.white)
+                            .fontWeight(.medium)
+                            .lineLimit(1)
+                        Spacer()
+                        Image(systemName: "chevron.down")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.7))
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 8)
+                    .contentShape(Rectangle())
+                    .onTapGesture { showStationDialog = true }
+                    .confirmationDialog("Станция", isPresented: $showStationDialog, titleVisibility: .hidden) {
+                        ForEach(stations) { station in
+                            Button(station.title) {
+                                stationNid = station.nid
+                            }
+                        }
+                        Button("Отмена", role: .cancel) {}
+                    }
 
                     // Громкость
                     VStack(alignment: .leading, spacing: 4) {
