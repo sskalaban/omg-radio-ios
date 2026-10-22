@@ -366,6 +366,8 @@ struct StationListView: View {
         .onLongPressGesture {
             favorites.toggle(station.nid)
         }
+        // Плавное появление плитки при прокрутке списка
+        .transition(.opacity)
     }
 
     /// Тап по плитке: включаем эфир станции с регионом плитки;
