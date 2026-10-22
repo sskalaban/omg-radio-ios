@@ -138,6 +138,15 @@ struct NewsItem: Decodable, Identifiable {
 
     private enum CodingKeys: String, CodingKey { case id, title, date, image, link, body }
 
+    init(id: String, title: String, date: String, image: String, link: String, body: String) {
+        self.id = id
+        self.title = title
+        self.date = date
+        self.image = image
+        self.link = link
+        self.body = body
+    }
+
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decodeIfPresent(String.self, forKey: .id) ?? UUID().uuidString

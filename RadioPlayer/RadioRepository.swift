@@ -58,9 +58,15 @@ final class RadioRepository: ObservableObject {
         return response.radios.map { $0.toStation(regionNames: names) }.filter { $0.hasStream }
     }
 
+    /// Новости из RSS prooren.ru; запасной канал — прежний JSON-эндпоинт.
     private func fetchNews() async throws -> [NewsItem] {
-        let (data, _) = try await URLSession.shared.data(from: newsURL)
-        return try JSONDecoder().decode(NewsResponse.self, from: data).news
+        do {
+            let (data, _) = try await URLSession.shared.data(from: URL(string: "https://prooren.ru/rss.xml")!)
+            return RssNewsParser.parse(data)
+        } catch {
+            let (data, _) = try await URLSession.shared.data(from: newsURL)
+            return try JSONDecoder().decode(NewsResponse.self, from: data).news
+        }
     }
 
     /// Отправка сообщения в прямой эфир: токен -> PBKDF2-хэш -> POST (как в Android-версии).

@@ -12,7 +12,8 @@ struct StationListView: View {
     @State private var showMessage = false
     @State private var showStationDetail = false
     @State private var showCityMenu = false
-    @State private var cityId: String = UserDefaults.standard.string(forKey: "cityFilter") ?? ""
+    // Только Оренбург и Орск; по умолчанию — Оренбург (пункта «все города» нет)
+    @State private var cityId: String = UserDefaults.standard.string(forKey: "cityFilter").flatMap { $0.isEmpty ? nil : $0 } ?? "1"
     // Выезжающий плеер: offset 0 = раскрыт, collapsedOffset = свёрнут за экраном
     @State private var sheetExpanded = false
     @State private var sheetOffset: CGFloat = 4000
@@ -298,10 +299,6 @@ struct StationListView: View {
         }
         .padding(.bottom, 2)
         .confirmationDialog("Город", isPresented: $showCityMenu, titleVisibility: .hidden) {
-            Button("Все города") {
-                cityId = ""
-                UserDefaults.standard.set("", forKey: "cityFilter")
-            }
             ForEach(regions) { region in
                 Button(region.name) {
                     cityId = region.regionId
@@ -433,6 +430,6 @@ struct MiniPlayerView: View {
         }
         .padding(.horizontal, 16)
         .frame(height: 72)
-        .background(Color.playerGradient)
+        .background(Color.newsGradient)
     }
 }
