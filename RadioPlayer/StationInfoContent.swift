@@ -32,33 +32,19 @@ struct StationInfoContent: View {
                 .padding(.top, 4)
             }
 
-            // Кнопки: избранное и play/pause
-            HStack(spacing: 20) {
-                Button {
-                    favorites.toggle(station.nid)
-                } label: {
-                    ZStack {
-                        Circle().fill(Color.omgTile)
-                        Image(systemName: favorites.contains(station.nid) ? "heart.fill" : "heart")
-                            .font(.title3)
-                            .foregroundStyle(
-                                favorites.contains(station.nid) ? Color.omgPink : .white
-                            )
-                    }
-                    .frame(width: 64, height: 64)
+            // Кнопка избранного (сердце) — по центру
+            Button {
+                favorites.toggle(station.nid)
+            } label: {
+                ZStack {
+                    Circle().fill(Color.omgTile)
+                    Image(systemName: favorites.contains(station.nid) ? "heart.fill" : "heart")
+                        .font(.title3)
+                        .foregroundStyle(
+                            favorites.contains(station.nid) ? Color.omgPink : .white
+                        )
                 }
-
-                Button {
-                    player.toggle(stations: RadioRepository.shared.stations)
-                } label: {
-                    ZStack {
-                        Circle().fill(Color.omgTile)
-                        Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.title3)
-                            .foregroundStyle(.white)
-                    }
-                    .frame(width: 64, height: 64)
-                }
+                .frame(width: 64, height: 64)
             }
             .padding(.top, 20)
 
