@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// Полноэкранный плеер: тёмный фон с градиентом в цвете станции сверху,
-/// зацикленная карусель логотипов с белыми кругами, управление, действия.
-/// Отображается как выезжающая панель (drag вверх/вниз — в StationListView).
+/// Полноэкранный плеер: единая страница из двух этажей — плеер и «О станции».
+/// Свайп вверх прокручивает к информации, свайп вниз — обратно,
+/// свайп вниз по плееру — сворачивает (зеркало Android PlayerScreen).
 struct PlayerView: View {
     let onClose: () -> Void
 
@@ -14,6 +14,10 @@ struct PlayerView: View {
     @State private var showAlarmDialog = false
     @State private var showSleepDialog = false
     @State private var gradientColor = Color.omgPink
+
+    // Страница: 0 = плеер, -экран = информация о станции
+    @State private var pageOffset: CGFloat = 0
+    @State private var infoShown = false
 
     var body: some View {
         GeometryReader { geo in
@@ -27,92 +31,23 @@ struct PlayerView: View {
                 )
                 .ignoresSafeArea()
 
+                // Двухэтажная страница
                 VStack(spacing: 0) {
-                    // Карусель логотипов (белые круги, зацикленная)
-                    LoopCarousel(
-                        stations: repo.stations,
-                        selection: player.stationIndex,
-                        onSwipeSelect: { index in
-                            if player.isPlaying {
-                                player.play(index: index, stations: repo.stations)
-                            } else {
-                                player.selectStation(index, stations: repo.stations)
-                            }
-                        }
-                    )
-                    // Ширина карусели ограничена экраном: иначе её контент
-                    // шире экрана и сдвигает центрирование всех контролов влево
-                    .frame(width: geo.size.width, height: geo.size.height * 0.30)
-                    .clipped()
-                    .padding(.top, geo.size.height * 0.12)
+                    playerFloor(geo: geo)
+                        .frame(height: geo.size.height)
 
-                    // Название, частота, трек
-                    Text(player.currentStation?.title ?? "")
-                        .font(.title).fontWeight(.bold)
-                        .foregroundStyle(.white)
-                        .multilineTextAlignment(.center)
-                        .padding(.top, geo.size.height * 0.04)
-
-                    Text(player.currentStation?.freqLabel(regionIndex: player.regionIndex) ?? "")
-                        .font(.title2).fontWeight(.light)
-                        .foregroundStyle(.white)
-                        .padding(.top, 4)
-
-                    if let track = player.trackTitle {
-                        Text(track)
-                            .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.9))
-                            .lineLimit(1)
-                            .padding(.top, 6)
-                            .padding(.horizontal, 24)
-                    }
-
-                    // prev / play / next
-                    HStack(spacing: 34) {
-                        Button { player.prev(stations: repo.stations) } label: {
-                            Image(systemName: "backward.end.fill")
-                                .font(.title)
-                        }
-                        Button { player.toggle(stations: repo.stations) } label: {
-                            Image(systemName: player.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                                .font(.system(size: 84))
-                        }
-                        Button { player.next(stations: repo.stations) } label: {
-                            Image(systemName: "forward.end.fill")
-                                .font(.title)
+                    ScrollView {
+                        if let station = player.currentStation {
+                            StationInfoContent(station: station)
+                                .frame(maxWidth: .infinity)
                         }
                     }
-                    .foregroundStyle(.white)
-                    .padding(.top, geo.size.height * 0.03)
-
-                    Spacer()
-
-                    // Действия: будильник / таймер сна
-                    HStack {
-                        actionIconWithLabel(
-                            "alarm",
-                            active: alarm.config.enabled,
-                            label: alarm.config.enabled ? alarm.config.timeLabel : " "
-                        ) { showAlarmDialog = true }
-                        Spacer()
-                        actionIconWithLabel(
-                            "timer",
-                            active: player.sleepRemainingSec > 0,
-                            label: player.sleepRemainingSec > 0 ? "\(player.sleepRemainingSec / 60 + 1)м" : " "
-                        ) { showSleepDialog = true }
-                    }
-                    .padding(.horizontal, 110)
-                    .padding(.bottom, geo.size.height * 0.04)
-
-                    if player.isBuffering {
-                        ProgressView().tint(.white)
-                            .padding(.bottom, 8)
-                    }
+                    .frame(height: geo.size.height)
                 }
-                // Весь столбец — шириной с экран: контролы центрируются по экрану
-                .frame(maxWidth: .infinity)
+                .offset(y: pageOffset)
+                .gesture(pageDrag(geo: geo))
 
-                // Кнопка «Скрыть»
+                // Кнопка «Скрыть» поверх страницы (всегда доступна)
                 VStack {
                     HStack {
                         Button(action: onClose) {
@@ -205,6 +140,143 @@ struct PlayerView: View {
         .onChange(of: player.stationIndex) { _ in updateGradient() }
     }
 
+    // MARK: - Этаж 1: плеер
+
+    private func playerFloor(geo: GeometryProxy) -> some View {
+        VStack(spacing: 0) {
+            // Карусель логотипов (белые круги, зацикленная)
+            LoopCarousel(
+                stations: repo.stations,
+                selection: player.stationIndex,
+                onSwipeSelect: { index in
+                    if player.isPlaying {
+                        player.play(index: index, stations: repo.stations)
+                    } else {
+                        player.selectStation(index, stations: repo.stations)
+                    }
+                }
+            )
+            // Ширина карусели ограничена экраном: иначе её контент
+            // шире экрана и сдвигает центрирование всех контролов влево
+            .frame(width: geo.size.width, height: geo.size.height * 0.30)
+            .clipped()
+            .padding(.top, geo.size.height * 0.12)
+
+            // Название, частота, трек
+            Text(player.currentStation?.title ?? "")
+                .font(.title).fontWeight(.bold)
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+                .padding(.top, geo.size.height * 0.04)
+
+            Text(player.currentStation?.freqLabel(regionIndex: player.regionIndex) ?? "")
+                .font(.title2).fontWeight(.light)
+                .foregroundStyle(.white)
+                .padding(.top, 4)
+
+            if let track = player.trackTitle {
+                Text(track)
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.9))
+                    .lineLimit(1)
+                    .padding(.top, 6)
+                    .padding(.horizontal, 24)
+            }
+
+            // prev / play / next
+            HStack(spacing: 34) {
+                Button { player.prev(stations: repo.stations) } label: {
+                    Image(systemName: "backward.end.fill")
+                        .font(.title)
+                }
+                Button { player.toggle(stations: repo.stations) } label: {
+                    Image(systemName: player.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                        .font(.system(size: 84))
+                }
+                Button { player.next(stations: repo.stations) } label: {
+                    Image(systemName: "forward.end.fill")
+                        .font(.title)
+                }
+            }
+            .foregroundStyle(.white)
+            .padding(.top, geo.size.height * 0.03)
+
+            Spacer()
+
+            // Действия: будильник / таймер сна
+            HStack {
+                actionIconWithLabel(
+                    "alarm",
+                    active: alarm.config.enabled,
+                    label: alarm.config.enabled ? alarm.config.timeLabel : " "
+                ) { showAlarmDialog = true }
+                Spacer()
+                actionIconWithLabel(
+                    "timer",
+                    active: player.sleepRemainingSec > 0,
+                    label: player.sleepRemainingSec > 0 ? "\(player.sleepRemainingSec / 60 + 1)м" : " "
+                ) { showSleepDialog = true }
+            }
+            .padding(.horizontal, 110)
+            .padding(.bottom, geo.size.height * 0.04)
+
+            if player.isBuffering {
+                ProgressView().tint(.white)
+                    .padding(.bottom, 8)
+            }
+        }
+        // Весь столбец — шириной с экран: контролы центрируются по экрану
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Жесты страницы
+
+    /// Единый drag: вверх — к информации о станции, вниз — обратно,
+    /// вниз по плееру — сворачивание (порог 20% или быстрый флинг).
+    private func pageDrag(geo: GeometryProxy) -> some Gesture {
+        DragGesture(minimumDistance: 10)
+            .onChanged { value in
+                guard abs(value.translation.height) > abs(value.translation.width) else { return }
+                let h = geo.size.height
+                let base: CGFloat = infoShown ? -h : 0
+                pageOffset = min(0, max(-h, base + value.translation.height))
+            }
+            .onEnded { value in
+                let h = geo.size.height
+                if !infoShown {
+                    if value.translation.height < -h * 0.2
+                        || value.predictedEndTranslation.height < -h * 0.5 {
+                        withAnimation(.easeOut(duration: 0.25)) {
+                            pageOffset = -h
+                            infoShown = true
+                        }
+                    } else if value.translation.height > h * 0.2
+                        || value.predictedEndTranslation.height > h * 0.5 {
+                        onClose()
+                        withAnimation(.easeOut(duration: 0.25)) {
+                            pageOffset = 0
+                        }
+                    } else {
+                        withAnimation(.easeOut(duration: 0.25)) {
+                            pageOffset = 0
+                        }
+                    }
+                } else {
+                    if value.translation.height > h * 0.2
+                        || value.predictedEndTranslation.height > h * 0.5 {
+                        withAnimation(.easeOut(duration: 0.25)) {
+                            pageOffset = 0
+                            infoShown = false
+                        }
+                    } else {
+                        withAnimation(.easeOut(duration: 0.25)) {
+                            pageOffset = -h
+                        }
+                    }
+                }
+            }
+    }
+
     /// Градиент в цвете логотипа станции; смена — плавная (как в Android-версии)
     private func updateGradient() {
         guard let station = player.currentStation else { return }
@@ -281,7 +353,7 @@ private struct LoopCarousel: View {
                 .gesture(
                     DragGesture(minimumDistance: 10)
                         .onChanged { value in
-                            // Только горизонтальные жесты (вертикаль — сворачивание плеера)
+                            // Только горизонтальные жесты (вертикаль — скролл страницы)
                             if abs(value.translation.width) > abs(value.translation.height) {
                                 dragOffset = value.translation.width
                             }
