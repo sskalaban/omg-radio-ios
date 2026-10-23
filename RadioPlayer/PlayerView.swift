@@ -5,8 +5,6 @@ import SwiftUI
 /// Отображается как выезжающая панель (drag вверх/вниз — в StationListView).
 struct PlayerView: View {
     let onClose: () -> Void
-    let onWriteMessage: () -> Void
-    let onShowInfo: () -> Void
 
     @ObservedObject private var repo = RadioRepository.shared
     @ObservedObject private var player = PlayerManager.shared
@@ -89,10 +87,8 @@ struct PlayerView: View {
 
                     Spacer()
 
-                    // Действия: написать / будильник / таймер сна / инфо
+                    // Действия: будильник / таймер сна
                     HStack {
-                        actionIcon("envelope", active: false) { onWriteMessage() }
-                        Spacer()
                         actionIconWithLabel(
                             "alarm",
                             active: alarm.config.enabled,
@@ -104,10 +100,8 @@ struct PlayerView: View {
                             active: player.sleepRemainingSec > 0,
                             label: player.sleepRemainingSec > 0 ? "\(player.sleepRemainingSec / 60 + 1)м" : " "
                         ) { showSleepDialog = true }
-                        Spacer()
-                        actionIcon("info.circle", active: false) { onShowInfo() }
                     }
-                    .padding(.horizontal, 40)
+                    .padding(.horizontal, 110)
                     .padding(.bottom, geo.size.height * 0.04)
 
                     if player.isBuffering {

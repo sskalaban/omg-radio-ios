@@ -10,7 +10,6 @@ struct StationListView: View {
     // Вкладка: 0 = Станции, 1 = Новости
     @State private var mainTab = 0
     @State private var showMessage = false
-    @State private var showStationDetail = false
     @State private var showCityMenu = false
     // Только Оренбург и Орск; по умолчанию — Оренбург (пункта «все города» нет)
     @State private var cityId: String = UserDefaults.standard.string(forKey: "cityFilter").flatMap { $0.isEmpty ? nil : $0 } ?? "1"
@@ -139,9 +138,7 @@ struct StationListView: View {
                 // Полноэкранный плеер: свайп вниз — сворачивается обратно
                 if !repo.stations.isEmpty {
                     PlayerView(
-                        onClose: { collapse(collapsedOffset: collapsedOffset) },
-                        onWriteMessage: { showMessage = true },
-                        onShowInfo: { showStationDetail = true }
+                        onClose: { collapse(collapsedOffset: collapsedOffset) }
                     )
                     .offset(y: sheetOffset)
                     .gesture(sheetDrag(collapsedOffset: collapsedOffset))
@@ -155,9 +152,6 @@ struct StationListView: View {
             if let station = player.currentStation {
                 MessageView(station: station)
             }
-        }
-        .sheet(isPresented: $showStationDetail) {
-            StationDetailView(index: player.stationIndex)
         }
         .task {
             await repo.load()

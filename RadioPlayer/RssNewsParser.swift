@@ -64,7 +64,7 @@ final class RssNewsParser: NSObject, XMLParserDelegate {
                 date: Self.formatDate(pubDate),
                 image: firstImageUrl(in: descriptionHtml) ?? "",
                 link: link.trimmingCharacters(in: .whitespacesAndNewlines),
-                body: descriptionHtml
+                body: extractBody(from: descriptionHtml)
             ))
             inItem = false
             field = nil
@@ -78,6 +78,32 @@ final class RssNewsParser: NSObject, XMLParserDelegate {
               let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
               let range = Range(match.range(at: 1), in: html) else { return nil }
         return String(html[range])
+    }
+
+    /// Текст новости из RSS-description: только содержимое абзацев <p> —
+    /// авторство, дата, теги, категория и <img> отбрасываются,
+    /// строки без лишних пробелов и отступов.
+    private func extractBody(from html: String) -> String {
+        guard let regex = try? NSRegularExpression(
+            pattern: "<p[^>]*>(.*?)</p>",
+            options: [.dotMatchesLineSeparators, .caseInsensitive]
+        ) else { return html }
+        let stripTags = try? NSRegularExpression(pattern: "<[^>]+>")
+        return regex.matches(in: html, range: NSRange(html.startIndex..., in: html))
+            .compactMap { match -> String? in
+                guard let range = Range(match.range(at: 1), in: html) else { return nil }
+                var text = String(html[range])
+                if let stripTags {
+                    text = stripTags.stringByReplacingMatches(
+                        in: text,
+                        range: NSRange(text.startIndex..., in: text),
+                        withTemplate: ""
+                    )
+                }
+                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                return trimmed.isEmpty ? nil : trimmed
+            }
+            .joined(separator: "\n\n")
     }
 
     private static let inputFormatter: DateFormatter = {
