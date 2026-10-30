@@ -273,7 +273,7 @@ struct StationListView: View {
 
     private var cityPicker: some View {
         Button {
-            showCityMenu = true
+            showCityMenu.toggle()
         } label: {
             HStack(spacing: 6) {
                 Spacer()
@@ -292,14 +292,29 @@ struct StationListView: View {
             .clipShape(RoundedRectangle(cornerRadius: 10))
         }
         .padding(.bottom, 2)
-        .confirmationDialog("Город", isPresented: $showCityMenu, titleVisibility: .hidden) {
-            ForEach(regions) { region in
-                Button(region.name) {
-                    cityId = region.regionId
-                    UserDefaults.standard.set(region.regionId, forKey: "cityFilter")
+        // Выпадающее окно по ширине кнопки (кастомный оверлей вместо системного)
+        .overlay(alignment: .top) {
+            if showCityMenu {
+                VStack(spacing: 0) {
+                    ForEach(regions) { region in
+                        Button {
+                            cityId = region.regionId
+                            UserDefaults.standard.set(region.regionId, forKey: "cityFilter")
+                            showCityMenu = false
+                        } label: {
+                            Text(region.name)
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 14)
+                        }
+                    }
                 }
+                .background(Color(hex: 0xFF1B2140))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .shadow(radius: 8)
+                .padding(.top, 44)
             }
-            Button("Отмена", role: .cancel) {}
         }
     }
 
@@ -422,7 +437,7 @@ struct MiniPlayerView: View {
                 }
             }
             .foregroundStyle(.white)
-            .font(.title3)
+            .font(.title)
         }
         .padding(.horizontal, 16)
         .frame(height: 72)

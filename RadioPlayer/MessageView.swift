@@ -17,13 +17,26 @@ struct MessageView: View {
             Color.omgBackground.ignoresSafeArea()
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    // Белая шапка с логотипом
+                    // Шапка с логотипом OMG — как на главной странице
                     ZStack {
-                        Color.white
-                        StationLogo(station: station)
-                            .padding(32)
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(Color.newsGradient)
+                        Image("g12")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 40)
                     }
-                    .frame(height: 200)
+                    .frame(height: 80)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .overlay(alignment: .leading) {
+                        Button { dismiss() } label: {
+                            Image(systemName: "chevron.left")
+                                .font(.title3).fontWeight(.bold)
+                                .foregroundStyle(.white)
+                                .padding(20)
+                        }
+                    }
 
                     if sent {
                         VStack(spacing: 20) {
