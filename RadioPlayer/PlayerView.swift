@@ -326,10 +326,10 @@ private struct LoopCarousel: View {
         GeometryReader { geo in
             let size = stations.count
             if size > 0 {
-                let pageW = geo.size.width - 176   // меньше отступы — круги больше
+                let pageW = geo.size.width - 128   // минимум пустого места по бокам
                 let spacing: CGFloat = 4
                 let step = pageW + spacing
-                let diameter = min(200, pageW, geo.size.height)
+                let diameter = min(220, pageW, geo.size.height)
 
                 HStack(spacing: spacing) {
                     ForEach(-2...2, id: \.self) { k in
