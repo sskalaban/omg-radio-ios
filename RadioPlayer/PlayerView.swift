@@ -158,9 +158,9 @@ struct PlayerView: View {
             )
             // Ширина карусели ограничена экраном: иначе её контент
             // шире экрана и сдвигает центрирование всех контролов влево
-            .frame(width: geo.size.width, height: geo.size.height * 0.30)
+            .frame(width: geo.size.width, height: geo.size.height * 0.40)
             .clipped()
-            .padding(.top, geo.size.height * 0.12)
+            .padding(.top, geo.size.height * 0.10)
 
             // Название, частота, трек
             Text(player.currentStation?.title ?? "")
@@ -329,7 +329,7 @@ private struct LoopCarousel: View {
                 let pageW = geo.size.width - 192   // боковые круги видны по краям
                 let spacing: CGFloat = 4
                 let step = pageW + spacing
-                let diameter = min(250, geo.size.height)   // центральный выступает за страницу
+                let diameter = min(280, geo.size.height)   // центральный выступает за страницу
 
                 HStack(spacing: spacing) {
                     ForEach(-2...2, id: \.self) { k in
